@@ -3,20 +3,31 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for Order Management System
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: vehicles
+    description: Vehicle management
+  - name: drivers
+    description: Driver management
+  - name: orders
+    description: Order management
+  - name: assignments
+    description: Assignment management
+  - name: users
+    description: User management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +35,423 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /user:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: User data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Invalid credentials
+        "429":
+          description: Too many login attempts
+
+  /logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  /users:
+    get:
+      operationId: getUsers
+      tags: [users]
+      summary: Get all users (admin only)
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SafeUser"
+        "403":
+          description: Forbidden
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafeUser"
+        "400":
+          description: Username already exists
+        "403":
+          description: Forbidden
+
+  /vehicles:
+    get:
+      operationId: getVehicles
+      tags: [vehicles]
+      summary: Get all vehicles
+      responses:
+        "200":
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vehicle"
+    post:
+      operationId: createVehicle
+      tags: [vehicles]
+      summary: Create a vehicle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVehicleRequest"
+      responses:
+        "201":
+          description: Vehicle created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+
+  /vehicles/{id}:
+    put:
+      operationId: updateVehicle
+      tags: [vehicles]
+      summary: Update a vehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateVehicleRequest"
+      responses:
+        "200":
+          description: Vehicle updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+    delete:
+      operationId: deleteVehicle
+      tags: [vehicles]
+      summary: Delete a vehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Vehicle deleted
+
+  /drivers:
+    get:
+      operationId: getDrivers
+      tags: [drivers]
+      summary: Get all drivers
+      responses:
+        "200":
+          description: List of drivers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Driver"
+    post:
+      operationId: createDriver
+      tags: [drivers]
+      summary: Create a driver
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDriverRequest"
+      responses:
+        "201":
+          description: Driver created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Driver"
+
+  /drivers/{id}:
+    get:
+      operationId: getDriver
+      tags: [drivers]
+      summary: Get a driver by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Driver data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Driver"
+    put:
+      operationId: updateDriver
+      tags: [drivers]
+      summary: Update a driver
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDriverRequest"
+      responses:
+        "200":
+          description: Driver updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Driver"
+    delete:
+      operationId: deleteDriver
+      tags: [drivers]
+      summary: Delete a driver
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Driver deleted
+
+  /drivers/{id}/stats/daily:
+    get:
+      operationId: getDriverDailyStats
+      tags: [drivers]
+      summary: Get driver daily stats
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Driver daily stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DriverDailyStats"
+
+  /orders:
+    get:
+      operationId: getOrders
+      tags: [orders]
+      summary: Get all orders
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    put:
+      operationId: updateOrder
+      tags: [orders]
+      summary: Update an order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderRequest"
+      responses:
+        "200":
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+    delete:
+      operationId: deleteOrder
+      tags: [orders]
+      summary: Delete an order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Order deleted
+
+  /assignments:
+    get:
+      operationId: getAssignments
+      tags: [assignments]
+      summary: Get all assignments
+      responses:
+        "200":
+          description: List of assignments with details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssignmentWithDetails"
+    post:
+      operationId: createAssignment
+      tags: [assignments]
+      summary: Create an assignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssignmentRequest"
+      responses:
+        "201":
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentWithDetails"
+
+  /assignments/{id}:
+    put:
+      operationId: updateAssignment
+      tags: [assignments]
+      summary: Update an assignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAssignmentRequest"
+      responses:
+        "200":
+          description: Assignment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentWithDetails"
+    delete:
+      operationId: deleteAssignment
+      tags: [assignments]
+      summary: Delete an assignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Assignment deleted
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [orders]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +462,404 @@ components:
       required:
         - status
 
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        isAdmin:
+          type: boolean
+      required:
+        - id
+        - username
+        - password
+        - isAdmin
+
+    SafeUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        isAdmin:
+          type: boolean
+      required:
+        - id
+        - username
+        - isAdmin
+
+    CreateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        isAdmin:
+          type: boolean
+      required:
+        - username
+        - password
+
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+        licensePlate:
+          type: string
+        type:
+          type: string
+        capacity:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: ["Sẵn sàng", "Bảo trì", "Đang sử dụng"]
+        note:
+          type: string
+          nullable: true
+      required:
+        - id
+        - licensePlate
+        - type
+        - status
+
+    CreateVehicleRequest:
+      type: object
+      properties:
+        licensePlate:
+          type: string
+        type:
+          type: string
+        capacity:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: ["Sẵn sàng", "Bảo trì", "Đang sử dụng"]
+        note:
+          type: string
+          nullable: true
+      required:
+        - licensePlate
+        - type
+
+    UpdateVehicleRequest:
+      type: object
+      properties:
+        licensePlate:
+          type: string
+        type:
+          type: string
+        capacity:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: ["Sẵn sàng", "Bảo trì", "Đang sử dụng"]
+        note:
+          type: string
+          nullable: true
+
+    Driver:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        licenseNumber:
+          type: string
+        status:
+          type: string
+          enum: ["Sẵn sàng", "Nghỉ phép", "Đang đi chuyến"]
+      required:
+        - id
+        - name
+        - phone
+        - licenseNumber
+        - status
+
+    CreateDriverRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        licenseNumber:
+          type: string
+        status:
+          type: string
+          enum: ["Sẵn sàng", "Nghỉ phép", "Đang đi chuyến"]
+      required:
+        - name
+        - phone
+        - licenseNumber
+
+    UpdateDriverRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        licenseNumber:
+          type: string
+        status:
+          type: string
+          enum: ["Sẵn sàng", "Nghỉ phép", "Đang đi chuyến"]
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderCode:
+          type: string
+        goodsDescription:
+          type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+          nullable: true
+        origin:
+          type: string
+        destination:
+          type: string
+        status:
+          type: string
+          enum: ["Chờ xử lý", "Đã phân công", "Đang vận chuyển", "Đã hoàn thành", "Đã hủy"]
+        price:
+          type: integer
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - orderCode
+        - goodsDescription
+        - customerName
+        - origin
+        - destination
+        - status
+
+    CreateOrderRequest:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        goodsDescription:
+          type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+          nullable: true
+        origin:
+          type: string
+        destination:
+          type: string
+        status:
+          type: string
+          enum: ["Chờ xử lý", "Đã phân công", "Đang vận chuyển", "Đã hoàn thành", "Đã hủy"]
+        price:
+          type: integer
+          nullable: true
+        note:
+          type: string
+          nullable: true
+      required:
+        - orderCode
+        - goodsDescription
+        - customerName
+        - origin
+        - destination
+
+    UpdateOrderRequest:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        goodsDescription:
+          type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+          nullable: true
+        origin:
+          type: string
+        destination:
+          type: string
+        status:
+          type: string
+          enum: ["Chờ xử lý", "Đã phân công", "Đang vận chuyển", "Đã hoàn thành", "Đã hủy"]
+        price:
+          type: integer
+          nullable: true
+        note:
+          type: string
+          nullable: true
+
+    Assignment:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        vehicleId:
+          type: integer
+        driverId:
+          type: integer
+        assignedAt:
+          type: string
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - orderId
+        - vehicleId
+        - driverId
+
+    AssignmentWithDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        vehicleId:
+          type: integer
+        driverId:
+          type: integer
+        assignedAt:
+          type: string
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+        order:
+          $ref: "#/components/schemas/Order"
+        vehicle:
+          $ref: "#/components/schemas/Vehicle"
+        driver:
+          $ref: "#/components/schemas/Driver"
+      required:
+        - id
+        - orderId
+        - vehicleId
+        - driverId
+        - order
+        - vehicle
+        - driver
+
+    CreateAssignmentRequest:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        vehicleId:
+          type: integer
+        driverId:
+          type: integer
+      required:
+        - orderId
+        - vehicleId
+        - driverId
+
+    UpdateAssignmentRequest:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        vehicleId:
+          type: integer
+        driverId:
+          type: integer
+        completedAt:
+          type: string
+          nullable: true
+
+    DriverDailyStats:
+      type: object
+      properties:
+        date:
+          type: string
+        totalTrips:
+          type: integer
+        trips:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssignmentWithDetails"
+      required:
+        - date
+        - totalTrips
+        - trips
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalOrders:
+          type: integer
+        pendingOrders:
+          type: integer
+        completedOrders:
+          type: integer
+        cancelledOrders:
+          type: integer
+        totalDrivers:
+          type: integer
+        availableDrivers:
+          type: integer
+        totalVehicles:
+          type: integer
+        availableVehicles:
+          type: integer
+        totalRevenue:
+          type: integer
+        recentOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+      required:
+        - totalOrders
+        - pendingOrders
+        - completedOrders
+        - cancelledOrders
+        - totalDrivers
+        - availableDrivers
+        - totalVehicles
+        - availableVehicles
+        - totalRevenue
+        - recentOrders
