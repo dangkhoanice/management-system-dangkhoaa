@@ -5,13 +5,13 @@ import { logger } from "./lib/logger.js";
 export async function seedDatabase(): Promise<void> {
   const existingUsers = await db.select().from(users);
   if (existingUsers.length === 0) {
-    const adminPassword = await hashPassword("admin123");
+    const adminPassword = await hashPassword("admin08042002");
     await db.insert(users).values({
       username: "admin",
       password: adminPassword,
       isAdmin: true,
     });
-    logger.info("Created default admin account (username: admin, password: admin123)");
+    logger.info("Created default admin account (username: admin, password: admin08042002)");
   }
 
   const existingDrivers = await db.select().from(drivers);
