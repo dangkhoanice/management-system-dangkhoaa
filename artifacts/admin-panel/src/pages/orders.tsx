@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useGetOrders,
   useCreateOrder,
@@ -8,12 +8,13 @@ import {
 } from "@workspace/api-client-react";
 import type { Order } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { formatVND, formatDate } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 
 const ORDER_STATUSES = ["Chờ xử lý", "Đã phân công", "Đang vận chuyển", "Đã hoàn thành", "Đã hủy"];
+const PAGE_SIZE = 10;
 
 interface FormData {
   orderCode: string;
@@ -168,6 +169,32 @@ export default function OrdersPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editOrder, setEditOrder] = useState<Order | null | "new">(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+
+  const filtered = useMemo(() => {
+    if (!orders) return [];
+    return orders.filter((o: Order) => {
+      const q = search.toLowerCase();
+      const matchSearch = !q ||
+        o.orderCode.toLowerCase().includes(q) ||
+        o.customerName.toLowerCase().includes(q) ||
+        (o.customerPhone || "").toLowerCase().includes(q) ||
+        (o.goodsDescription || "").toLowerCase().includes(q) ||
+        o.origin.toLowerCase().includes(q) ||
+        o.destination.toLowerCase().includes(q);
+      const matchStatus = !statusFilter || o.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [orders, search, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleSearch = (val: string) => { setSearch(val); setPage(1); };
+  const handleStatus = (val: string) => { setStatusFilter(val); setPage(1); };
 
   const handleDelete = (order: Order) => {
     if (!confirm(`Xóa đơn hàng "${order.orderCode}"?`)) return;
@@ -192,11 +219,29 @@ export default function OrdersPage() {
         </button>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Tìm theo mã đơn, khách hàng, điểm đi/đến..."
+            className={`${inputClass} pl-9`}
+          />
+        </div>
+        <select value={statusFilter} onChange={(e) => handleStatus(e.target.value)} className={`${inputClass} sm:w-48`}>
+          <option value="">Tất cả trạng thái</option>
+          {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
+        </select>
+      </div>
+
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : !orders || orders.length === 0 ? (
-          <div className="py-16 text-center text-sm text-muted-foreground">Chưa có đơn hàng nào.</div>
+        ) : paginated.length === 0 ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">
+            {search || statusFilter ? "Không tìm thấy đơn hàng phù hợp." : "Chưa có đơn hàng nào."}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -213,7 +258,7 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order: Order, i: number) => (
+                {paginated.map((order: Order, i: number) => (
                   <tr key={order.id} className={i % 2 === 0 ? "" : "bg-muted/20"}>
                     <td className={tdClass}><span className="font-mono text-xs font-medium">{order.orderCode}</span></td>
                     <td className={tdClass}>
@@ -235,6 +280,31 @@ export default function OrdersPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!isLoading && filtered.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border text-xs text-muted-foreground">
+            <span>
+              Hiển thị {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} / {filtered.length} đơn hàng
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="p-1 rounded hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="px-2">Trang {safePage} / {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                className="p-1 rounded hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

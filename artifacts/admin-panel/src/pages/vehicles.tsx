@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useGetVehicles,
   useCreateVehicle,
@@ -8,11 +8,12 @@ import {
 } from "@workspace/api-client-react";
 import type { Vehicle } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { useToast } from "@/hooks/use-toast";
 
 const VEHICLE_STATUSES = ["Sẵn sàng", "Bảo trì", "Đang sử dụng"];
+const PAGE_SIZE = 10;
 
 interface FormData {
   licensePlate: string;
@@ -114,6 +115,29 @@ export default function VehiclesPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editVehicle, setEditVehicle] = useState<Vehicle | null | "new">(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+
+  const filtered = useMemo(() => {
+    if (!vehicles) return [];
+    return vehicles.filter((v: Vehicle) => {
+      const q = search.toLowerCase();
+      const matchSearch = !q ||
+        v.licensePlate.toLowerCase().includes(q) ||
+        (v.type || "").toLowerCase().includes(q) ||
+        (v.note || "").toLowerCase().includes(q);
+      const matchStatus = !statusFilter || v.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [vehicles, search, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleSearch = (val: string) => { setSearch(val); setPage(1); };
+  const handleStatus = (val: string) => { setStatusFilter(val); setPage(1); };
 
   const handleDelete = (v: Vehicle) => {
     if (!confirm(`Xóa phương tiện "${v.licensePlate}"?`)) return;
@@ -138,11 +162,29 @@ export default function VehiclesPage() {
         </button>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Tìm theo biển số, loại xe..."
+            className={`${inputClass} pl-9`}
+          />
+        </div>
+        <select value={statusFilter} onChange={(e) => handleStatus(e.target.value)} className={`${inputClass} sm:w-44`}>
+          <option value="">Tất cả trạng thái</option>
+          {VEHICLE_STATUSES.map((s) => <option key={s}>{s}</option>)}
+        </select>
+      </div>
+
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : !vehicles || vehicles.length === 0 ? (
-          <div className="py-16 text-center text-sm text-muted-foreground">Chưa có phương tiện nào.</div>
+        ) : paginated.length === 0 ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">
+            {search || statusFilter ? "Không tìm thấy phương tiện phù hợp." : "Chưa có phương tiện nào."}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -157,7 +199,7 @@ export default function VehiclesPage() {
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((v: Vehicle, i: number) => (
+                {paginated.map((v: Vehicle, i: number) => (
                   <tr key={v.id} className={i % 2 === 0 ? "" : "bg-muted/20"}>
                     <td className={tdClass}><span className="font-mono font-semibold text-foreground">{v.licensePlate}</span></td>
                     <td className={tdClass}>{v.type || "—"}</td>
@@ -174,6 +216,31 @@ export default function VehiclesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!isLoading && filtered.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border text-xs text-muted-foreground">
+            <span>
+              Hiển thị {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} / {filtered.length} phương tiện
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="p-1 rounded hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="px-2">Trang {safePage} / {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                className="p-1 rounded hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
